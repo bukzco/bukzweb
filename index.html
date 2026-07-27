@@ -716,7 +716,6 @@ const CONFIG = {
   MES_COLLECTION: "libros-del-mes",     // colección de Shopify para el botón "Libros del mes"
   NOVEDADES_COLLECTION: "penguin-novedades",  // colección para el botón "Novedades"
   PROMOS: [
-    { key:"planeta", menuLabel:"3x2 Planeta",               badge:"Planeta 3x2", tag:"PROMO 3X2 PLANETA", vendorMatch:"planeta", color:"#2F6FED", desc:"Compra 2 libros de Planeta de Libros y lleva el tercero gratis." }
   ],
   // Producción: Bold necesita tu llave de comercio + firma de integridad (hash)
   // generada en backend. Siigo necesita su API (auth + crear factura) tras el pago.
@@ -1560,10 +1559,17 @@ function showPromosMenu(){
   app.classList.add('chat-mode');
   history.push({role:'user',text:'Promos'});
   const uEl=addUser('Promos');
-  const reply='Este mes tenemos dos promociones (no se combinan entre sí). ¿Cuál quieres ver?';
+  const promos=CONFIG.PROMOS||[];
+  if(!promos.length){
+    const reply='Por ahora no tenemos promociones activas, pero muy pronto habrá nuevas. Mientras tanto, cuéntame qué libro buscas y te ayudo a encontrarlo. 📚';
+    history.push({role:'assistant',text:reply});
+    addBot(reply,[],[]);
+    scrollToEl(uEl);busy=false;return;
+  }
+  const reply='Estas son nuestras promociones activas (no se combinan entre sí). ¿Cuál quieres ver?';
   history.push({role:'assistant',text:reply});
   const e=document.createElement('div');e.className='msg-bot';
-  e.innerHTML=`<div class="txt fade">${esc(reply)}</div><div class="promo-menu fade">${(CONFIG.PROMOS||[]).map(p=>`<div class="promo-opt" style="--pc:${p.color}"><div class="promo-opt-h"><span class="promo-dot"></span><span class="po-t">${esc(p.menuLabel||p.badge)}</span></div><div class="po-s">${esc(p.desc||'')}</div><button class="po-btn" data-promo="${p.key}">Ver promo</button></div>`).join('')}</div>`;
+  e.innerHTML=`<div class="txt fade">${esc(reply)}</div><div class="promo-menu fade">${promos.map(p=>`<div class="promo-opt" style="--pc:${p.color}"><div class="promo-opt-h"><span class="promo-dot"></span><span class="po-t">${esc(p.menuLabel||p.badge)}</span></div><div class="po-s">${esc(p.desc||'')}</div><button class="po-btn" data-promo="${p.key}">Ver promo</button></div>`).join('')}</div>`;
   thread.appendChild(e);
   e.querySelectorAll('[data-promo]').forEach(b=>b.addEventListener('click',()=>showPromo(b.dataset.promo)));
   scrollToEl(uEl);busy=false;
