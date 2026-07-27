@@ -185,6 +185,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .pm-fav:hover{border-color:rgba(255,90,122,.4)}
   .pm-fav.active{background:rgba(255,90,122,.1);border-color:rgba(255,90,122,.4);color:#e0466a}
   .pm-fav.active svg{fill:#ff5a7a;stroke:#ff5a7a}
+  .pm-share{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;margin-left:8px;background:transparent;border:1px solid rgba(0,0,0,.12);color:#6a6a64;border-radius:999px;padding:9px 16px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .14s ease}
+  .pm-share:hover{border-color:rgba(47,111,237,.45);color:#2f6fed}
   /* Visor de portada ampliada */
   .img-lightbox{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:30px;background:rgba(8,8,7,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s ease;cursor:zoom-out}
   .img-lightbox.open{opacity:1;pointer-events:auto}
@@ -697,6 +699,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="pm-stores" id="pmStores"></div>
       <button class="pm-add" id="pmAdd">Agregar al carrito</button>
       <button class="pm-fav" id="pmFav"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg><span id="pmFavLbl">Añadir a favoritos</span></button>
+      <button class="pm-share" id="pmShare">🔗 Compartir este libro</button>
     </div>
   </div>
 </div>
@@ -1034,8 +1037,21 @@ function openModal(b){
   const pmFav=document.getElementById('pmFav'), pmFavLbl=document.getElementById('pmFavLbl');
   const setFavLbl=()=>{const on=isFav(b.id);pmFav.classList.toggle('active',on);pmFavLbl.textContent=on?'En favoritos':'Añadir a favoritos';};
   setFavLbl(); pmFav.onclick=()=>{toggleFav(b.id);setFavLbl();};
+  const pmShare=document.getElementById('pmShare');
+  if(pmShare){
+    pmShare.textContent='🔗 Compartir este libro';
+    pmShare.onclick=async()=>{
+      const link=bookShareLink(b.id);
+      const shareData={title:b.titulo||'BUKZ',text:`Mira este libro en BUKZ: ${b.titulo||''}`,url:link};
+      if(navigator.share){ try{ await navigator.share(shareData); return; }catch(e){} }
+      try{ await navigator.clipboard.writeText(link); }catch(e){}
+      pmShare.textContent='✓ Enlace copiado';
+      setTimeout(()=>{pmShare.textContent='🔗 Compartir este libro';},1800);
+    };
+  }
   pmShow(true);
 }
+function bookShareLink(id){ return location.origin+location.pathname+'?libro='+encodeURIComponent(id); }
 document.getElementById('pmClose').onclick=()=>pmShow(false);
 document.getElementById('pmBackdrop').onclick=()=>pmShow(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')pmShow(false);});
@@ -1462,6 +1478,14 @@ document.getElementById('shopStatusX').onclick=()=>document.getElementById('shop
       loadPromoSets();
       const _pk=new URLSearchParams(location.search).get('promo');
       if(_pk && (CONFIG.PROMOS||[]).some(p=>p.key===_pk)){ setTimeout(()=>showPromo(_pk),250); }
+      const _libro=new URLSearchParams(location.search).get('libro');
+      if(_libro){
+        try{
+          let b=byId(_libro);
+          if(!b){ const arr=await fetchByHandles([_libro]); b=arr&&arr[0]; }
+          if(b) openModal(b);
+        }catch(e){ console.warn('libro compartido:',e); }
+      }
 
     }else{
       showShopStatus(false,'Shopify respondió <b>HTTP '+r.status+'</b>: '+(j?JSON.stringify(j.errors||j):txt).slice(0,220));
@@ -1635,7 +1659,7 @@ document.querySelectorAll('.qcat').forEach(b=>b.addEventListener('click',()=>{co
   // Mostrar una sola vez por visitante, 3 segundos después de cargar
   let seen=false; try{ seen=localStorage.getItem(KEY)==='1'; }catch(e){}
   const sp=new URLSearchParams(location.search);
-  const isShared=!!sp.get('wl') || !!sp.get('promo');
+  const isShared=!!sp.get('wl') || !!sp.get('promo') || !!sp.get('libro');
   if(!seen && !isShared){ setTimeout(open, 3000); }
   closeBtn.onclick=close;
   ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
